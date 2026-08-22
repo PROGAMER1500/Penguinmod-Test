@@ -1082,6 +1082,9 @@ export default async function ({ addon, console, msg }) {
             child.innerText = newValue;
           }
         }
+
+        if (child.tagName === 'NEXT')
+          child.remove();
       }
 
       if (opcodeData.mutate) {
@@ -1096,22 +1099,28 @@ export default async function ({ addon, console, msg }) {
           const valueElement = document.createElement("value");
           valueElement.setAttribute("name", inputName);
 
-          const shadowElement = document.createElement("shadow");
-          shadowElement.setAttribute("type", inputData.shadowType);
+          if (inputData.shadowType) {
+            const shadowElement = document.createElement("shadow");
+            shadowElement.setAttribute("type", inputData.shadowType);
 
-          const shadowFieldElement = document.createElement("field");
-          shadowFieldElement.setAttribute("name", getShadowFieldName(inputData.shadowType));
-          shadowFieldElement.innerText = callIfFunction(inputData.value);
+            const shadowFieldElement = document.createElement("field");
+            shadowFieldElement.setAttribute("name", getShadowFieldName(inputData.shadowType));
+            shadowFieldElement.innerText = callIfFunction(inputData.value);
 
-          shadowElement.appendChild(shadowFieldElement);
-          valueElement.appendChild(shadowElement);
+            shadowElement.appendChild(shadowFieldElement);
+            valueElement.appendChild(shadowElement);
+          }
           xml.appendChild(valueElement);
         }
       }
 
       // Remove the old block and insert the new one.
+      const oldTarget = block.nextConnection?.targetConnection;
+      if (oldTarget) block.nextConnection?.disconnect?.();
       block.dispose();
       const newBlock = pasteBlockXML(workspace, xml);
+      if (newBlock.nextConnection && oldTarget)
+        newBlock.nextConnection.connect(oldTarget);
 
       if (parentConnection) {
         // Search for the same type of connection on the new block as on the old block.
